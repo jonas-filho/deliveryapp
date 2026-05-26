@@ -1,0 +1,8 @@
+name = "deliveryapp-api"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "deliveryapp-db"
+database_id = "COLE_O_ID_AQUI"
