@@ -1,1180 +1,283 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#2563EB">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>DeliveryApp</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
-input,select,textarea,button{font-family:inherit}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:99px}
-.fi{border:1.5px solid var(--bd);border-radius:12px;background:var(--inp);color:var(--t);padding:10px 14px;font-size:14px;width:100%;display:block}
-.fi:focus{outline:none;border-color:#2563EB}
-.fi-sm{border:1.5px solid var(--bd);border-radius:10px;background:var(--inp);color:var(--t);padding:8px 10px;font-size:13px;width:100%}
-.fi-sm:focus{outline:none;border-color:#2563EB}
-.fi-err{border-color:#EF4444!important}
-textarea.fi{resize:none}
-.spin{animation:spin 0.8s linear infinite;display:inline-block}
-@keyframes spin{to{transform:rotate(360deg)}}
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family:'Inter',sans-serif;
+  background:#2563eb;
+  min-height:100vh;
+  padding:20px;
+}
+
+.container{
+  max-width:500px;
+  margin:0 auto;
+}
+
+.card{
+  background:#fff;
+  border-radius:24px;
+  padding:24px;
+  margin-top:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+
+.logo{
+  text-align:center;
+  color:#fff;
+  margin-top:50px;
+}
+
+.logo h1{
+  font-size:38px;
+  font-weight:800;
+}
+
+.logo p{
+  opacity:.8;
+  margin-top:8px;
+}
+
+input,select,textarea{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:2px solid #dbeafe;
+  margin-top:8px;
+  margin-bottom:16px;
+  font-size:15px;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:#2563eb;
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+  font-size:15px;
+}
+
+button:hover{
+  opacity:.95;
+}
+
+.title{
+  font-size:22px;
+  font-weight:800;
+  margin-bottom:20px;
+  color:#1e293b;
+}
+
+.item{
+  background:#eff6ff;
+  padding:14px;
+  border-radius:14px;
+  margin-bottom:12px;
+}
+
+.item h3{
+  color:#1e293b;
+  margin-bottom:6px;
+}
+
+.badge{
+  display:inline-block;
+  background:#16a34a;
+  color:#fff;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  margin-top:8px;
+}
+
+.logout{
+  background:#dc2626;
+  margin-top:10px;
+}
+
+.hidden{
+  display:none;
+}
+
+.info{
+  font-size:13px;
+  color:#64748b;
+  margin-bottom:20px;
+}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const {useState,useReducer,useEffect,useRef}=React;
 
-// ════════════════════════════════════════════════════════
-//  ⚙️  CONFIGURAÇÃO — substitua após publicar o Worker
-// ════════════════════════════════════════════════════════
-const API_BASE = 'https://deliveryapp-api.SEU_SUBDOMINIO.workers.dev';
+<div class="container">
 
-// ── API CLIENT ──────────────────────────────────────────
-function tok(){ return localStorage.getItem('da_tok')||''; }
-async function req(method,path,body){
-  const r=await fetch(API_BASE+path,{
-    method,
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok()},
-    ...(body?{body:JSON.stringify(body)}:{})
-  });
-  const d=await r.json();
-  if(!r.ok) throw new Error(d.error||'Erro '+r.status);
-  return d;
-}
-const API={
-  login:(b)=>req('POST','/api/login',b),
-  users:()=>req('GET','/api/users'),
-  addUser:(b)=>req('POST','/api/users',b),
-  putUser:(id,b)=>req('PUT','/api/users/'+id,b),
-  delUser:(id)=>req('DELETE','/api/users/'+id),
-  branches:()=>req('GET','/api/branches'),
-  addBranch:(b)=>req('POST','/api/branches',b),
-  putBranch:(id,b)=>req('PUT','/api/branches/'+id,b),
-  delBranch:(id)=>req('DELETE','/api/branches/'+id),
-  deliveries:()=>req('GET','/api/deliveries'),
-  addDelivery:(b)=>req('POST','/api/deliveries',b),
-  setStatus:(id,st)=>req('PUT','/api/deliveries/'+id+'/status',{status:st}),
-  assign:(id,uid)=>req('PUT','/api/deliveries/'+id+'/assign',{delivererId:uid}),
-  delDelivery:(id)=>req('DELETE','/api/deliveries/'+id),
-};
+  <div class="logo">
+    <h1>DeliveryApp</h1>
+    <p>Gestão de Entregas</p>
+  </div>
 
-// ── ICONS ───────────────────────────────────────────────
-const IC={
-  home:"M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10",
-  truck:"M1 3h15v13H1z M16 8h4l3 3v5h-7V8z M5.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z M18.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z",
-  plus:"M12 5v14 M5 12h14",
-  search:"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0",
-  wa:"M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z",
-  ok:"M20 6L9 17l-5-5",x:"M18 6L6 18 M6 6l12 12",
-  clock:"M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z M12 6v6l4 2",
-  pin:"M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z M12 10a2 2 0 100-4 2 2 0 000 4",
-  user:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8",
-  users:"M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75",
-  bar:"M18 20V10 M12 20V4 M6 20v-6",
-  trash:"M3 6h18 M8 6V4h8v2 M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6",
-  phone:"M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 01.007 2.132 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z",
-  box:"M16.5 9.4l-9-5.19 M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12",
-  back:"M19 12H5 M12 19l-7-7 7-7",
-  warn:"M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z M12 9v4 M12 17h.01",
-  logout:"M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
-  edit:"M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7 M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",
-  hash:"M4 9h16 M4 15h16 M10 3L8 21 M16 3l-2 18",
-  navigate:"M3 11l19-9-9 19-2-8-8-2z",
-  building:"M3 21h18 M5 21V7l8-4v18 M19 21V11l-6-4 M9 9h1 M9 13h1 M9 17h1 M13 13h1 M13 17h1",
-  route:"M9 18l6-6-6-6",
-  refresh:"M1 4v6h6 M23 20v-6h-6 M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15",
-};
-function Ico({ic,size=20,color="currentColor"}){
-  const d=IC[ic]||"";
-  return(
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      style={{display:'inline-block',verticalAlign:'middle',flexShrink:0}}>
-      {d.split(' M ').map((seg,i)=><path key={i} d={i===0?seg:'M '+seg}/>)}
-    </svg>
-  );
-}
+  <div class="card" id="loginCard">
+    <div class="title">Entrar no sistema</div>
 
-// ── CONSTANTS ────────────────────────────────────────────
-const STATUS={
-  criado:         {label:"Criado",         color:"#6B7280",bg:"#F3F4F6",dot:"#9CA3AF"},
-  separando:      {label:"Separando",      color:"#D97706",bg:"#FEF3C7",dot:"#F59E0B"},
-  saiu_entrega:   {label:"Saiu p/ Entrega",color:"#2563EB",bg:"#EFF6FF",dot:"#3B82F6"},
-  entregue:       {label:"Entregue",       color:"#059669",bg:"#ECFDF5",dot:"#10B981"},
-  cliente_ausente:{label:"Ausente",        color:"#EA580C",bg:"#FFF7ED",dot:"#F97316"},
-  reagendado:     {label:"Reagendado",     color:"#7C3AED",bg:"#F5F3FF",dot:"#8B5CF6"},
-  cancelado:      {label:"Cancelado",      color:"#DC2626",bg:"#FEF2F2",dot:"#EF4444"},
-};
-const STATUS_PERM={
-  admin:Object.keys(STATUS),
-  vendedor:['criado','separando','cancelado'],
-  entregador:['saiu_entrega','entregue','cliente_ausente','reagendado'],
-  apoio:['saiu_entrega','entregue','cliente_ausente','reagendado'],
-};
-const PAYMENTS=["Dinheiro","PIX","Cartão","Boleto","Pago antecipado"];
-const UFS=["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
-const ROLES={admin:"Administrador",vendedor:"Vendedor",entregador:"Entregador",apoio:"Apoio"};
-const RC={admin:{bg:"#EFF6FF",c:"#2563EB"},vendedor:{bg:"#ECFDF5",c:"#059669"},entregador:{bg:"#FFF7ED",c:"#EA580C"},apoio:{bg:"#F5F3FF",c:"#7C3AED"}};
-const BC=["#2563EB","#16A34A","#EA580C","#7C3AED","#DC2626","#0891B2","#D97706","#DB2777"];
-const WA_MSG={
-  criado:n=>`Olá ${n}! Seu pedido foi registrado. Em breve entraremos em contato. 😊`,
-  saiu_entrega:n=>`Olá ${n}! Seu pedido saiu para entrega. Logo chegará! 🚚`,
-  entregue:n=>`Olá ${n}! Seu pedido foi entregue com sucesso. Obrigado! ⭐`,
-  cliente_ausente:n=>`Olá ${n}! Tentamos entregar mas você não estava. Entraremos em contato. 📞`,
-};
+    <select id="user">
+      <option value="">Selecione o usuário</option>
+      <option value="admin">Admin</option>
+    </select>
 
-// ── HELPERS ──────────────────────────────────────────────
-const fmtDT=iso=>iso?new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-const ago=iso=>{if(!iso)return'';const m=Math.floor((Date.now()-new Date(iso))/60000);return m<1?'agora':m<60?`${m}min`:m<1440?`${Math.floor(m/60)}h`:`${Math.floor(m/1440)}d`;};
-const isLate=d=>!['entregue','cancelado'].includes(d.status)&&Date.now()-new Date(d.created_at||d.createdAt)>86400000;
+    <input type="password" id="password" placeholder="Senha"/>
 
-// ── UI ATOMS ─────────────────────────────────────────────
-function StatusBadge({status,big}){
-  const c=STATUS[status]||STATUS.criado;
-  return(
-    <span style={{background:c.bg,color:c.color,display:'inline-flex',alignItems:'center',gap:5,
-      borderRadius:99,fontWeight:700,fontSize:big?13:11,padding:big?'5px 12px':'3px 9px',whiteSpace:'nowrap'}}>
-      <span style={{width:6,height:6,borderRadius:99,background:c.dot,flexShrink:0}}/>
-      {c.label}
-    </span>
-  );
-}
-function RoleBadge({role}){
-  const c=RC[role]||RC.apoio;
-  return <span style={{background:c.bg,color:c.c,fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:99}}>{ROLES[role]||role}</span>;
-}
-function Box({children,s:{},onClick}){
-  return <div onClick={onClick} style={{background:'var(--c)',border:'1.5px solid var(--bd)',borderRadius:18,padding:16,...s,cursor:onClick?'pointer':undefined}}>{children}</div>;
-}
-function Btn({children,onClick,v='blue',sm,ic,disabled,full,loading}){
-  const V={blue:{bg:'#2563EB',color:'#fff',bd:'none'},sec:{bg:'var(--bg)',color:'var(--ts)',bd:'1.5px solid var(--bd)'},ghost:{bg:'transparent',color:'var(--ts)',bd:'none'},green:{bg:'#16A34A',color:'#fff',bd:'none'},red:{bg:'#FEF2F2',color:'#DC2626',bd:'1.5px solid #FECACA'},orange:{bg:'#FFF7ED',color:'#EA580C',bd:'1.5px solid #FED7AA'}};
-  const st=V[v]||V.blue;
-  return(
-    <button disabled={disabled||loading} onClick={onClick}
-      style={{background:st.bg,color:st.color,border:st.bd,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,
-        borderRadius:12,fontWeight:700,fontSize:sm?12:14,padding:sm?'7px 12px':'10px 18px',
-        width:full?'100%':undefined,opacity:(disabled||loading)?0.6:1,cursor:(disabled||loading)?'not-allowed':'pointer',flexShrink:0}}>
-      {loading
-        ? <span className="spin" style={{width:14,height:14,border:'2px solid currentColor',borderTopColor:'transparent',borderRadius:99}}/>
-        : ic&&<Ico ic={ic} size={sm?13:16} color="currentColor"/>}
-      {children}
-    </button>
-  );
-}
-function Ttl({ic,label}){
-  return <div style={{display:'flex',alignItems:'center',gap:8}}><Ico ic={ic} size={15} color="#2563EB"/><span style={{fontSize:13,fontWeight:700,color:'var(--t)'}}>{label}</span></div>;
-}
-function IRow({l,v,hi}){
-  return <div><p style={{fontSize:11,fontWeight:600,color:'var(--ts)',marginBottom:2}}>{l}</p><p style={{fontSize:14,fontWeight:700,color:hi?'#EA580C':'var(--t)'}}>{v||'—'}</p></div>;
-}
-function Toast({msg,type,onClose}){
-  useEffect(()=>{const t=setTimeout(onClose,3500);return()=>clearTimeout(t);},[]);
-  const C={success:'#059669',error:'#DC2626',info:'#2563EB'};
-  return <div style={{position:'fixed',top:68,left:'50%',transform:'translateX(-50%)',background:C[type]||C.info,color:'#fff',padding:'10px 20px',borderRadius:12,fontSize:13,fontWeight:700,zIndex:999,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',whiteSpace:'nowrap',pointerEvents:'none'}}>{msg}</div>;
-}
-function Modal({children,onClose,title}){
-  return(
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:200,display:'flex',alignItems:'flex-end',justifyContent:'center'}}
-      onPointerDown={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:'var(--c)',borderRadius:'20px 20px 0 0',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto',padding:20}}
-        onPointerDown={e=>e.stopPropagation()}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-          <span style={{fontSize:15,fontWeight:800,color:'var(--t)'}}>{title}</span>
-          <button onClick={onClose} style={{cursor:'pointer',border:'none',background:'none',padding:4}}><Ico ic="x" size={20} color="var(--ts)"/></button>
-        </div>
-        {children}
-      </div>
+    <button onclick="login()">Entrar</button>
+
+    <p class="info">
+      Usuário: admin<br>
+      Senha: admin123
+    </p>
+  </div>
+
+  <div class="card hidden" id="dashboard">
+    <div class="title">Painel de Entregas</div>
+
+    <input type="text" id="cliente" placeholder="Nome do cliente"/>
+    <input type="text" id="telefone" placeholder="Telefone"/>
+    <input type="text" id="endereco" placeholder="Endereço"/>
+    <textarea id="obs" placeholder="Observações"></textarea>
+
+    <button onclick="salvarEntrega()">Salvar Entrega</button>
+
+    <button class="logout" onclick="logout()">Sair</button>
+
+    <div style="margin-top:20px">
+      <div class="title" style="font-size:18px">Entregas</div>
+      <div id="lista"></div>
     </div>
-  );
-}
-function Spinner({msg='Carregando...'}){
-  return(
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:60,gap:12}}>
-      <div className="spin" style={{width:32,height:32,border:'3px solid var(--bd)',borderTopColor:'#2563EB',borderRadius:99}}/>
-      <p style={{fontSize:13,color:'var(--ts)'}}>{msg}</p>
-    </div>
-  );
-}
+  </div>
 
-// ── REDUCER ──────────────────────────────────────────────
-const INIT={loggedIn:false,currentUser:null,users:[],branches:[],deliveries:[],view:'dashboard',sel:null,dark:false};
-function reducer(s,a){
-  switch(a.type){
-    case'LOGIN':
-      localStorage.setItem('da_tok',a.token);
-      localStorage.setItem('da_usr',JSON.stringify(a.user));
-      return{...s,loggedIn:true,currentUser:a.user};
-    case'LOGOUT':
-      localStorage.removeItem('da_tok');
-      localStorage.removeItem('da_usr');
-      return{...INIT,dark:s.dark};
-    case'RESTORE':return{...s,loggedIn:true,currentUser:a.user};
-    case'SET':return{...s,...a.p};
-    case'NAV':return{...s,view:a.v,sel:a.d||null};
-    case'ADD_D':return{...s,deliveries:[a.d,...s.deliveries],view:'dashboard'};
-    case'UPD_D':return{...s,deliveries:s.deliveries.map(d=>d.id===a.d.id?a.d:d),sel:s.sel?.id===a.d.id?a.d:s.sel};
-    case'DEL_D':return{...s,deliveries:s.deliveries.filter(d=>d.id!==a.id),view:'dashboard',sel:null};
-    case'DARK':return{...s,dark:!s.dark};
-    default:return s;
+</div>
+
+<script>
+
+const ADMIN = {
+  user:'admin',
+  password:'admin123'
+};
+
+function login(){
+
+  const user = document.getElementById('user').value;
+  const password = document.getElementById('password').value;
+
+  if(user === ADMIN.user && password === ADMIN.password){
+
+    localStorage.setItem('logado','true');
+
+    document.getElementById('loginCard').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+
+    carregarEntregas();
+
+  }else{
+    alert('Usuário ou senha inválidos');
   }
 }
 
-// ════════════════════════════════════════════════════════
-//  LOGIN
-// ════════════════════════════════════════════════════════
-function Login({users,dispatch}){
-  const [selId,setSelId]=useState('');
-  const [pass,setPass]=useState('');
-  const [err,setErr]=useState('');
-  const [loading,setLoading]=useState(false);
-  const selUser=users.find(u=>u.id===selId);
-  const grp={admin:[],vendedor:[],entregador:[],apoio:[]};
-  users.filter(u=>u.active||u.active===1).forEach(u=>{if(grp[u.role])grp[u.role].push(u);});
+function logout(){
 
-  async function doLogin(){
-    setErr('');
-    if(!selId){setErr('Selecione um usuário.');return;}
-    if(!pass){setErr('Digite a senha.');return;}
-    setLoading(true);
-    try{
-      const res=await API.login({userId:selId,password:pass});
-      dispatch({type:'LOGIN',token:res.token,user:res.user});
-    }catch(e){setErr(e.message);}
-    setLoading(false);
-  }
+  localStorage.removeItem('logado');
 
-  return(
-    <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#1E40AF,#3B82F6)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{width:'100%',maxWidth:380}}>
-        <div style={{textAlign:'center',marginBottom:24}}>
-          <div style={{width:68,height:68,borderRadius:20,background:'rgba(255,255,255,0.2)',border:'2px solid rgba(255,255,255,0.4)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 12px'}}>
-            <Ico ic="truck" size={34} color="#fff"/>
-          </div>
-          <h1 style={{fontSize:26,fontWeight:800,color:'#fff'}}>DeliveryApp</h1>
-          <p style={{fontSize:13,color:'rgba(255,255,255,0.75)',marginTop:4}}>Gestão de Entregas</p>
-        </div>
-
-        <div style={{background:'#fff',borderRadius:24,padding:24,boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
-          <h2 style={{fontSize:16,fontWeight:800,color:'#1E293B',marginBottom:20,textAlign:'center'}}>Acessar sistema</h2>
-
-          <div style={{marginBottom:14}}>
-            <label style={{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:4}}>Selecione seu usuário <span style={{color:'#EF4444'}}>*</span></label>
-            <select value={selId} onChange={e=>setSelId(e.target.value)} className="fi"
-              style={{appearance:'none',cursor:'pointer',color:selId?'#1E293B':'#94A3B8'}}>
-              <option value="">— Escolha seu nome —</option>
-              {Object.entries({admin:'Administrador',vendedor:'Vendedor',entregador:'Entregador',apoio:'Apoio'}).map(([role,label])=>{
-                const g=grp[role];
-                if(!g.length)return null;
-                return(<optgroup key={role} label={`── ${label} ──`}>{g.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</optgroup>);
-              })}
-            </select>
-            {selUser&&<div style={{marginTop:6,display:'flex',alignItems:'center',gap:6,padding:'5px 10px',background:'#F8FAFC',borderRadius:8}}><RoleBadge role={selUser.role}/><span style={{fontSize:11,color:'#64748B'}}>selecionado</span></div>}
-          </div>
-
-          <div style={{marginBottom:14}}>
-            <label style={{fontSize:11,fontWeight:700,color:'#64748B',display:'block',marginBottom:4}}>Senha <span style={{color:'#EF4444'}}>*</span></label>
-            <input className="fi" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&doLogin()}/>
-          </div>
-
-          {err&&<div style={{background:'#FEF2F2',border:'1.5px solid #FECACA',borderRadius:12,padding:'10px 14px',fontSize:13,color:'#DC2626',fontWeight:600,marginBottom:14,textAlign:'center'}}>{err}</div>}
-
-          <button onClick={doLogin} disabled={loading}
-            style={{width:'100%',background:'#2563EB',color:'#fff',border:'none',borderRadius:12,padding:12,fontSize:14,fontWeight:700,cursor:loading?'not-allowed':'pointer',opacity:loading?0.7:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-            {loading&&<span className="spin" style={{width:14,height:14,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:99}}/>}
-            {loading?'Entrando...':'Entrar no sistema'}
-          </button>
-
-          {users.length===0&&<p style={{marginTop:14,fontSize:12,color:'#94A3B8',textAlign:'center'}}>⚠ Conectando ao servidor...</p>}
-        </div>
-      </div>
-    </div>
-  );
+  location.reload();
 }
 
-// ════════════════════════════════════════════════════════
-//  DASHBOARD
-// ════════════════════════════════════════════════════════
-function Dashboard({s,dispatch}){
-  const {currentUser,deliveries,branches}=s;
-  const [q,setQ]=useState('');
-  const [fst,setFst]=useState('');
-  const [fdt,setFdt]=useState('today');
-  const [refreshing,setRefreshing]=useState(false);
-  const today=new Date().toDateString();
+function salvarEntrega(){
 
-  async function refresh(){
-    setRefreshing(true);
-    try{const d=await API.deliveries();dispatch({type:'SET',p:{deliveries:d}});}catch{}
-    setRefreshing(false);
+  const cliente = document.getElementById('cliente').value;
+  const telefone = document.getElementById('telefone').value;
+  const endereco = document.getElementById('endereco').value;
+  const obs = document.getElementById('obs').value;
+
+  if(!cliente || !telefone || !endereco){
+    alert('Preencha os campos obrigatórios');
+    return;
   }
 
-  const todayD=deliveries.filter(x=>new Date(x.created_at).toDateString()===today);
-  const pending=deliveries.filter(x=>!['entregue','cancelado'].includes(x.status));
-  const done=deliveries.filter(x=>x.status==='entregue');
-  const late=deliveries.filter(isLate);
+  const entregas = JSON.parse(localStorage.getItem('entregas') || '[]');
 
-  const list=deliveries.filter(x=>{
-    const mq=!q||x.customer_name.toLowerCase().includes(q.toLowerCase())||String(x.order_num).includes(q)||(x.addr_neighborhood||'').toLowerCase().includes(q.toLowerCase());
-    const ms=!fst||x.status===fst;
-    const md=fdt==='all'||(fdt==='today'&&new Date(x.created_at).toDateString()===today)||(fdt==='week'&&Date.now()-new Date(x.created_at)<604800000);
-    return mq&&ms&&md;
+  entregas.unshift({
+    cliente,
+    telefone,
+    endereco,
+    obs,
+    status:'Pendente'
   });
 
-  const canCreate=currentUser.role==='admin'||currentUser.role==='vendedor';
-  const stats=[
-    {l:'Hoje',v:todayD.length,c:'#3B82F6',bg:'#EFF6FF',ic:'box'},
-    {l:'Pendentes',v:pending.length,c:'#F59E0B',bg:'#FEF3C7',ic:'clock'},
-    {l:'Entregues',v:done.length,c:'#10B981',bg:'#ECFDF5',ic:'ok'},
-    {l:'Atrasadas',v:late.length,c:'#EF4444',bg:'#FEF2F2',ic:'warn'},
-  ];
+  localStorage.setItem('entregas', JSON.stringify(entregas));
 
-  return(
-    <div style={{display:'flex',flexDirection:'column',gap:14}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <div>
-          <p style={{fontSize:12,color:'var(--ts)'}}>Olá,</p>
-          <h2 style={{fontSize:18,fontWeight:800,color:'var(--t)',lineHeight:1.2}}>{currentUser.name}</h2>
-        </div>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <RoleBadge role={currentUser.role}/>
-          <button onClick={refresh} style={{width:32,height:32,borderRadius:10,border:'1.5px solid var(--bd)',background:'var(--bg)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <span className={refreshing?'spin':''} style={{display:'inline-block'}}><Ico ic="refresh" size={15} color={refreshing?'#2563EB':'var(--ts)'}/></span>
-          </button>
-        </div>
-      </div>
+  document.getElementById('cliente').value = '';
+  document.getElementById('telefone').value = '';
+  document.getElementById('endereco').value = '';
+  document.getElementById('obs').value = '';
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-        {stats.map(st=>(
-          <Box key={st.l}>
-            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
-              <div><p style={{fontSize:10,fontWeight:600,color:'var(--ts)',marginBottom:4}}>{st.l}</p><p style={{fontSize:28,fontWeight:800,color:st.c,lineHeight:1}}>{st.v}</p></div>
-              <div style={{background:st.bg,borderRadius:10,padding:8}}><Ico ic={st.ic} size={18} color={st.c}/></div>
-            </div>
-          </Box>
-        ))}
-      </div>
+  carregarEntregas();
 
-      <Box>
-        <div style={{display:'flex',flexDirection:'column',gap:8}}>
-          <div style={{position:'relative'}}>
-            <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}><Ico ic="search" size={14} color="#9CA3AF"/></span>
-            <input className="fi-sm" value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar nome, #pedido, bairro..." style={{paddingLeft:32}}/>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-            <select className="fi-sm" value={fst} onChange={e=>setFst(e.target.value)}>
-              <option value="">Todos status</option>
-              {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-            </select>
-            <select className="fi-sm" value={fdt} onChange={e=>setFdt(e.target.value)}>
-              <option value="today">Hoje</option>
-              <option value="week">Esta semana</option>
-              <option value="all">Todas</option>
-            </select>
-          </div>
-        </div>
-      </Box>
-
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <span style={{fontSize:12,fontWeight:600,color:'var(--ts)'}}>{list.length} pedido{list.length!==1?'s':''}</span>
-        {canCreate&&<Btn sm ic="plus" onClick={()=>dispatch({type:'NAV',v:'new'})}>Novo Pedido</Btn>}
-      </div>
-
-      {list.length===0
-        ?<Box s={{textAlign:'center',padding:40}}><Ico ic="box" size={36} color="#CBD5E1"/><p style={{color:'#9CA3AF',fontWeight:600,marginTop:12,fontSize:13}}>Nenhum pedido encontrado</p></Box>
-        :list.map(x=><DCard key={x.id} x={x} dispatch={dispatch} role={currentUser.role} branches={branches}/>)
-      }
-    </div>
-  );
+  alert('Entrega cadastrada com sucesso!');
 }
 
-function DCard({x,dispatch,role,branches}){
-  const late=isLate(x);
-  const br=branches.find(b=>b.id===x.branch_id);
-  const bColor=br?.color||x.branch_color||'#9CA3AF';
-  function openWA(e){
-    e.stopPropagation();
-    const p=(x.customer_phone1||'').replace(/\D/g,'');
-    const m=WA_MSG[x.status]?WA_MSG[x.status](x.customer_name):`Olá ${x.customer_name}!`;
-    window.open(`https://wa.me/55${p}?text=${encodeURIComponent(m)}`,'_blank');
+function carregarEntregas(){
+
+  const lista = document.getElementById('lista');
+
+  const entregas = JSON.parse(localStorage.getItem('entregas') || '[]');
+
+  lista.innerHTML = '';
+
+  if(entregas.length === 0){
+    lista.innerHTML = '<p>Nenhuma entrega cadastrada.</p>';
+    return;
   }
-  return(
-    <Box onClick={()=>dispatch({type:'NAV',v:'detail',d:x})} s={{borderColor:late?'#FECACA':x.priority==='Urgente'?'#FED7AA':undefined}}>
-      <div style={{display:'flex',gap:10,alignItems:'flex-start'}}>
-        <div style={{width:38,height:38,borderRadius:10,background:'#EFF6FF',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-          <span style={{fontSize:13,fontWeight:800,color:'#2563EB'}}>#{x.order_num}</span>
-        </div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',marginBottom:2}}>
-            <span style={{fontWeight:700,fontSize:14,color:'var(--t)'}}>{x.customer_name}</span>
-            {x.priority==='Urgente'&&<span style={{fontSize:10,fontWeight:800,color:'#EA580C',background:'#FFF7ED',padding:'2px 7px',borderRadius:99}}>⚡ URGENTE</span>}
-            {late&&<span style={{fontSize:10,fontWeight:800,color:'#EF4444'}}>⚠ Atrasada</span>}
-          </div>
-          {(x.branch_name||br?.name)&&(
-            <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:3}}>
-              <div style={{width:6,height:6,borderRadius:99,background:bColor,flexShrink:0}}/>
-              <span style={{fontSize:10,fontWeight:700,color:bColor}}>{x.branch_name||br?.name}</span>
-            </div>
-          )}
-          <p style={{fontSize:11,color:'#94A3B8',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-            {x.addr_neighborhood} · {x.addr_city}{x.store_order_num?` · Loja #${x.store_order_num}`:''}
-          </p>
-          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-            <StatusBadge status={x.status}/>
-            <span style={{fontSize:10,color:'#94A3B8'}}>{x.payment_method}</span>
-            {role==='admin'&&x.deliverer_name&&<span style={{fontSize:10,color:'#7C3AED',fontWeight:600}}>🚚 {x.deliverer_name}</span>}
-            <span style={{fontSize:10,color:'#94A3B8',marginLeft:'auto'}}>{ago(x.created_at)} atrás</span>
-          </div>
-        </div>
-        <button onClick={openWA} style={{width:34,height:34,borderRadius:10,background:'#DCFCE7',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-          <Ico ic="wa" size={16} color="#16A34A"/>
-        </button>
+
+  entregas.forEach((e,index)=>{
+
+    lista.innerHTML += `
+      <div class="item">
+        <h3>${e.cliente}</h3>
+
+        <p><strong>Telefone:</strong> ${e.telefone}</p>
+        <p><strong>Endereço:</strong> ${e.endereco}</p>
+        <p><strong>Obs:</strong> ${e.obs || '-'}</p>
+
+        <span class="badge">${e.status}</span>
       </div>
-    </Box>
-  );
-}
-
-// ════════════════════════════════════════════════════════
-//  NEW DELIVERY
-// ════════════════════════════════════════════════════════
-function NewDelivery({s,dispatch}){
-  const {branches,currentUser}=s;
-  const [saving,setSaving]=useState(false);
-  const [toast,setToast]=useState(null);
-  const [errs,setErrs]=useState({});
-  const [done,setDone]=useState(false);
-  const [cepLoad,setCepLoad]=useState(false);
-
-  // Fields as individual state vars — avoids re-render/focus loss
-  const [name,setName]=useState('');
-  const [p1,setP1]=useState('');
-  const [p2,setP2]=useState('');
-  const [zip,setZip]=useState('');
-  const [street,setStreet]=useState('');
-  const [num,setNum]=useState('');
-  const [comp,setComp]=useState('');
-  const [neigh,setNeigh]=useState('');
-  const [city,setCity]=useState('');
-  const [uf,setUf]=useState('PE');
-  const [storeNum,setStoreNum]=useState('');
-  const [volumes,setVolumes]=useState('1');
-  const [notes,setNotes]=useState('');
-  const [prio,setPrio]=useState('Normal');
-  const [pay,setPay]=useState('');
-  const [chg,setChg]=useState('');
-  const [branchId,setBranchId]=useState(branches[0]?.id||'');
-
-  async function fetchCep(){
-    const c=zip.replace(/\D/g,'');
-    if(c.length!==8)return;
-    setCepLoad(true);
-    try{
-      const r=await fetch(`https://viacep.com.br/ws/${c}/json/`);
-      const d=await r.json();
-      if(!d.erro){setStreet(d.logradouro||street);setNeigh(d.bairro||neigh);setCity(d.localidade||city);setUf(d.uf||uf);}
-    }catch{}
-    setCepLoad(false);
-  }
-
-  async function submit(){
-    const e={};
-    if(!name.trim())e.name='Obrigatório';
-    if(!p1.trim())e.p1='Obrigatório';
-    if(!street.trim())e.street='Obrigatório';
-    if(!num.trim())e.num='Obrigatório';
-    if(!neigh.trim())e.neigh='Obrigatório';
-    if(!city.trim())e.city='Obrigatório';
-    if(!pay)e.pay='Selecione';
-    if(!branchId)e.branchId='Selecione a filial';
-    if(Object.keys(e).length){setErrs(e);return;}
-    setSaving(true);
-    try{
-      const res=await API.addDelivery({
-        customerName:name,phone1:p1,phone2:p2,
-        street,number:num,complement:comp,neighborhood:neigh,city,state:uf,zip,
-        notes,priority:prio,paymentMethod:pay,changeFor:chg,
-        storeOrderNum:storeNum,volumes:parseInt(volumes)||1,branchId,
-      });
-      const br=branches.find(b=>b.id===branchId);
-      dispatch({type:'ADD_D',d:{
-        ...res,
-        customer_name:name,customer_phone1:p1,customer_phone2:p2,
-        addr_street:street,addr_number:num,addr_complement:comp,
-        addr_neighborhood:neigh,addr_city:city,addr_state:uf,addr_zip:zip,
-        notes,priority:prio,payment_method:pay,change_for:chg,
-        store_order_num:storeNum,volumes:parseInt(volumes)||1,
-        branch_id:branchId,branch_name:br?.name||'',branch_color:br?.color||'#9CA3AF',
-        created_at:new Date().toISOString(),
-        seller_name:currentUser.name,deliverer_name:'',
-        statusHistory:[{status:'criado',changedAt:new Date().toISOString(),changedBy:currentUser.name}],
-      }});
-      setDone(true);
-    }catch(ex){setToast({msg:ex.message,type:'error'});}
-    setSaving(false);
-  }
-
-  if(done)return(
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'80px 20px',gap:16}}>
-      <div style={{width:72,height:72,borderRadius:99,background:'#ECFDF5',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="ok" size={36} color="#10B981"/></div>
-      <h2 style={{fontSize:20,fontWeight:800,color:'#059669'}}>Pedido cadastrado!</h2>
-      <p style={{color:'#94A3B8',fontSize:13}}>Salvo no banco de dados.</p>
-    </div>
-  );
-
-  const L=({label,k,req})=><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>{label}{req&&<span style={{color:'#EF4444'}}> *</span>}{errs[k]&&<span style={{color:'#EF4444',fontWeight:400,marginLeft:6}}>{errs[k]}</span>}</label>;
-
-  return(
-    <div style={{maxWidth:600,margin:'0 auto'}}>
-      {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:18}}>
-        <Btn v="ghost" sm ic="back" onClick={()=>dispatch({type:'NAV',v:'dashboard'})}/>
-        <h1 style={{fontSize:18,fontWeight:800,color:'var(--t)'}}>Novo Pedido</h1>
-      </div>
-
-      <div style={{display:'flex',flexDirection:'column',gap:14,paddingBottom:40}}>
-        {/* FILIAL */}
-        <Box>
-          <Ttl ic="building" label="Filial de Origem"/>
-          <p style={{fontSize:11,color:'var(--ts)',marginTop:4,marginBottom:12}}>Onde a mercadoria está para recolha</p>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {branches.map(b=>(
-              <button key={b.id} onClick={()=>setBranchId(b.id)}
-                style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',borderRadius:14,
-                  border:`2px solid ${branchId===b.id?b.color:'var(--bd)'}`,
-                  background:branchId===b.id?b.color+'18':'var(--inp)',cursor:'pointer',textAlign:'left'}}>
-                <div style={{width:10,height:10,borderRadius:99,background:b.color,flexShrink:0}}/>
-                <div style={{flex:1}}><p style={{fontWeight:700,fontSize:13,color:'var(--t)'}}>{b.name}</p><p style={{fontSize:11,color:'var(--ts)'}}>{b.street}, {b.number} · {b.neighborhood}</p></div>
-                {branchId===b.id&&<Ico ic="ok" size={16} color={b.color}/>}
-              </button>
-            ))}
-          </div>
-          {errs.branchId&&<p style={{fontSize:11,color:'#EF4444',marginTop:6}}>{errs.branchId}</p>}
-        </Box>
-
-        {/* CLIENTE */}
-        <Box>
-          <Ttl ic="user" label="Dados do Cliente"/>
-          <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:14}}>
-            <div><L label="Nome completo" k="name" req/><input className={`fi${errs.name?' fi-err':''}`} value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: João da Silva"/></div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              <div><L label="Telefone principal" k="p1" req/><input className={`fi${errs.p1?' fi-err':''}`} value={p1} onChange={e=>setP1(e.target.value)} placeholder="(81) 99999-9999"/></div>
-              <div><L label="Secundário" k="p2"/><input className="fi" value={p2} onChange={e=>setP2(e.target.value)} placeholder="(81) 99999-9999"/></div>
-            </div>
-          </div>
-        </Box>
-
-        {/* ENDEREÇO */}
-        <Box>
-          <Ttl ic="pin" label="Endereço de Entrega"/>
-          <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:14}}>
-            <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
-              <div style={{flex:1}}><L label="CEP" k="zip"/><input className="fi" value={zip} onChange={e=>setZip(e.target.value.replace(/\D/g,'').replace(/^(\d{5})(\d{1,3})/,'$1-$2').slice(0,9))} placeholder="55000-000"/></div>
-              <Btn v="sec" sm onClick={fetchCep} disabled={cepLoad}>{cepLoad?'...':'Buscar'}</Btn>
-            </div>
-            <div><L label="Rua / Avenida" k="street" req/><input className={`fi${errs.street?' fi-err':''}`} value={street} onChange={e=>setStreet(e.target.value)} placeholder="Ex: Rua das Flores"/></div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              <div><L label="Número" k="num" req/><input className={`fi${errs.num?' fi-err':''}`} value={num} onChange={e=>setNum(e.target.value)} placeholder="123"/></div>
-              <div><L label="Complemento" k="comp"/><input className="fi" value={comp} onChange={e=>setComp(e.target.value)} placeholder="Apto 4"/></div>
-            </div>
-            <div><L label="Bairro" k="neigh" req/><input className={`fi${errs.neigh?' fi-err':''}`} value={neigh} onChange={e=>setNeigh(e.target.value)} placeholder="Ex: Centro"/></div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              <div><L label="Cidade" k="city" req/><input className={`fi${errs.city?' fi-err':''}`} value={city} onChange={e=>setCity(e.target.value)} placeholder="Ex: Caruaru"/></div>
-              <div><L label="Estado" k="uf"/><select className="fi" value={uf} onChange={e=>setUf(e.target.value)}>{UFS.map(u=><option key={u} value={u}>{u}</option>)}</select></div>
-            </div>
-          </div>
-        </Box>
-
-        {/* PEDIDO & PAGAMENTO */}
-        <Box>
-          <Ttl ic="hash" label="Pedido & Pagamento"/>
-          <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:14}}>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              <div><L label="Nº Pedido da Loja" k="storeNum"/><input className="fi" value={storeNum} onChange={e=>setStoreNum(e.target.value)} placeholder="Ex: 1042"/><p style={{fontSize:10,color:'var(--ts)',marginTop:2}}>Número interno</p></div>
-              <div><L label="Qtd de Volumes" k="volumes"/><input className="fi" type="number" value={volumes} onChange={e=>setVolumes(e.target.value)} placeholder="1"/><p style={{fontSize:10,color:'var(--ts)',marginTop:2}}>Caixas, sacolas...</p></div>
-            </div>
-            <div>
-              <L label="Prioridade" k="prio"/>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                {['Normal','Urgente'].map(p=>(
-                  <button key={p} onClick={()=>setPrio(p)}
-                    style={{padding:10,borderRadius:12,fontSize:13,fontWeight:700,border:'2px solid',cursor:'pointer',
-                      borderColor:prio===p?(p==='Urgente'?'#EA580C':'#2563EB'):'var(--bd)',
-                      background:prio===p?(p==='Urgente'?'#EA580C':'#2563EB'):'var(--inp)',
-                      color:prio===p?'#fff':'var(--t)'}}>
-                    {p==='Urgente'?'⚡ ':''}{p}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <L label="Forma de pagamento" k="pay" req/>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                {PAYMENTS.map(p=>(
-                  <button key={p} onClick={()=>setPay(p)}
-                    style={{padding:'9px 6px',borderRadius:12,fontSize:12,fontWeight:700,border:'2px solid',cursor:'pointer',
-                      borderColor:pay===p?'#2563EB':'var(--bd)',background:pay===p?'#2563EB':'var(--inp)',color:pay===p?'#fff':'var(--t)'}}>
-                    {p}
-                  </button>
-                ))}
-              </div>
-              {errs.pay&&<p style={{fontSize:11,color:'#EF4444',marginTop:4}}>{errs.pay}</p>}
-            </div>
-            {pay==='Dinheiro'&&<div><L label="Troco para (R$)" k="chg"/><input className="fi" value={chg} onChange={e=>setChg(e.target.value)} placeholder="Ex: 100"/></div>}
-            <div><L label="Observações" k="notes"/><textarea className="fi" rows={3} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Ex: Ligar antes, cuidado com o portão..."/></div>
-          </div>
-        </Box>
-
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-          <Btn v="sec" full onClick={()=>dispatch({type:'NAV',v:'dashboard'})}>Cancelar</Btn>
-          <Btn full ic="ok" loading={saving} onClick={submit}>Salvar Pedido</Btn>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════
-//  DETAIL
-// ════════════════════════════════════════════════════════
-function DeliveryDetail({del,s,dispatch}){
-  const {currentUser,users,branches}=s;
-  const [confirmDel,setConfirmDel]=useState(false);
-  const [assignOpen,setAssignOpen]=useState(false);
-  const [assignSel,setAssignSel]=useState(del.deliverer_id||'');
-  const [toast,setToast]=useState(null);
-  const [saving,setSaving]=useState(false);
-  const deliverers=users.filter(u=>u.role==='entregador'||u.role==='apoio');
-  const allowed=STATUS_PERM[currentUser.role]||[];
-  const isAdmin=currentUser.role==='admin';
-  const br=branches.find(b=>b.id===del.branch_id);
-  const bColor=br?.color||del.branch_color||'#9CA3AF';
-  const showT=(msg,type='success')=>{setToast({msg,type});setTimeout(()=>setToast(null),3000);};
-
-  async function doStatus(st){
-    setSaving(true);
-    try{
-      await API.setStatus(del.id,st);
-      const history=[...(del.statusHistory||[]),{status:st,changedAt:new Date().toISOString(),changedBy:currentUser.name}];
-      dispatch({type:'UPD_D',d:{...del,status:st,statusHistory:history}});
-      showT(`Status: ${STATUS[st].label}`);
-    }catch(e){showT(e.message,'error');}
-    setSaving(false);
-  }
-  async function doAssign(){
-    setSaving(true);
-    try{
-      await API.assign(del.id,assignSel);
-      const u=users.find(x=>x.id===assignSel);
-      const history=[...(del.statusHistory||[]),{status:del.status,changedAt:new Date().toISOString(),changedBy:currentUser.name,note:`Entregador: ${u?.name}`}];
-      dispatch({type:'UPD_D',d:{...del,deliverer_id:assignSel,deliverer_name:u?.name||'',statusHistory:history}});
-      setAssignOpen(false);showT('Entregador designado!');
-    }catch(e){showT(e.message,'error');}
-    setSaving(false);
-  }
-  async function doDelete(){
-    try{await API.delDelivery(del.id);dispatch({type:'DEL_D',id:del.id});}
-    catch(e){showT(e.message,'error');}
-  }
-  const openMaps=()=>{const a=`${del.addr_street} ${del.addr_number}, ${del.addr_neighborhood}, ${del.addr_city}`;window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`,'_blank');};
-  const openWA=()=>{const p=(del.customer_phone1||'').replace(/\D/g,'');const m=WA_MSG[del.status]?WA_MSG[del.status](del.customer_name):`Olá ${del.customer_name}!`;window.open(`https://wa.me/55${p}?text=${encodeURIComponent(m)}`,'_blank');};
-
-  return(
-    <div style={{maxWidth:600,margin:'0 auto'}}>
-      {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:18}}>
-        <Btn v="ghost" sm ic="back" onClick={()=>dispatch({type:'NAV',v:'dashboard'})}/>
-        <div style={{flex:1}}>
-          <span style={{fontSize:18,fontWeight:800,color:'var(--t)'}}>{del.customer_name}</span>
-          <p style={{fontSize:11,color:'var(--ts)'}}>Pedido #{del.order_num} · {fmtDT(del.created_at)}</p>
-        </div>
-        <StatusBadge status={del.status} big/>
-      </div>
-
-      <div style={{display:'flex',flexDirection:'column',gap:14,paddingBottom:40}}>
-        {br&&(
-          <Box s={{borderLeftWidth:4,borderLeftColor:bColor}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <div style={{width:10,height:10,borderRadius:99,background:bColor}}/>
-                <div><p style={{fontSize:11,color:'var(--ts)'}}>Filial de Origem</p><p style={{fontSize:14,fontWeight:800,color:bColor}}>{br.name}</p><p style={{fontSize:11,color:'var(--ts)'}}>{br.street}, {br.number} · {br.neighborhood}</p></div>
-              </div>
-              <button onClick={()=>{const a=`${br.street} ${br.number}, ${br.neighborhood}, ${br.city}`;window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`,'_blank');}}
-                style={{fontSize:11,fontWeight:700,color:bColor,border:`1.5px solid ${bColor}`,background:'transparent',borderRadius:10,padding:'6px 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
-                <Ico ic="pin" size={12} color={bColor}/>Ver filial
-              </button>
-            </div>
-          </Box>
-        )}
-
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-          <Btn v="green" full ic="wa" onClick={openWA}>WhatsApp</Btn>
-          <Btn v="sec" full ic="pin" onClick={openMaps}>Ver no Mapa</Btn>
-          <a href={`tel:${del.customer_phone1}`} style={{display:'contents'}}><Btn v="sec" full ic="phone">Ligar</Btn></a>
-          {isAdmin&&<Btn v="orange" full ic="users" onClick={()=>setAssignOpen(true)}>{del.deliverer_name?'Trocar Entregador':'Designar Entregador'}</Btn>}
-          {isAdmin&&<Btn v="red" full ic="trash" onClick={()=>setConfirmDel(true)}>Excluir Pedido</Btn>}
-        </div>
-
-        {confirmDel&&(
-          <div style={{background:'#FEF2F2',border:'1.5px solid #FECACA',borderRadius:16,padding:14}}>
-            <p style={{fontSize:13,fontWeight:700,color:'#DC2626',marginBottom:10}}>Confirmar exclusão do pedido #{del.order_num}?</p>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-              <Btn v="red" sm full onClick={doDelete}>Sim, excluir</Btn>
-              <Btn v="sec" sm full onClick={()=>setConfirmDel(false)}>Cancelar</Btn>
-            </div>
-          </div>
-        )}
-
-        <Box s={{borderColor:del.deliverer_name?'#FED7AA':'var(--bd)'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-            <div style={{display:'flex',alignItems:'center',gap:8}}><Ico ic="truck" size={15} color="#EA580C"/><span style={{fontSize:13,fontWeight:700,color:'var(--t)'}}>Entregador</span></div>
-            {isAdmin&&<button onClick={()=>setAssignOpen(true)} style={{fontSize:11,fontWeight:700,color:'#2563EB',border:'none',background:'none',cursor:'pointer'}}>{del.deliverer_name?'Trocar':'Designar'}</button>}
-          </div>
-          <p style={{marginTop:8,fontSize:14,fontWeight:700,color:del.deliverer_name?'#EA580C':'#9CA3AF'}}>{del.deliverer_name?`🚚 ${del.deliverer_name}`:'Aguardando designação'}</p>
-        </Box>
-
-        {allowed.length>0&&(
-          <Box>
-            <Ttl ic="clock" label="Atualizar Status"/>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginTop:12}}>
-              {Object.entries(STATUS).filter(([k])=>allowed.includes(k)).map(([k,v])=>(
-                <button key={k} onClick={()=>doStatus(k)} disabled={saving}
-                  style={{padding:'8px 4px',borderRadius:10,fontSize:11,fontWeight:700,border:'none',cursor:'pointer',
-                    background:del.status===k?v.dot:v.bg,color:del.status===k?'#fff':v.color,opacity:saving?0.6:1}}>
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </Box>
-        )}
-
-        <Box><Ttl ic="user" label="Dados do Cliente"/><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:12}}><IRow l="Nome" v={del.customer_name}/><IRow l="Telefone" v={del.customer_phone1}/>{del.customer_phone2&&<IRow l="Tel. 2" v={del.customer_phone2}/>}</div></Box>
-
-        <Box>
-          <Ttl ic="pin" label="Endereço de Entrega"/>
-          <p style={{marginTop:10,fontSize:14,color:'var(--t)',lineHeight:1.7}}>{del.addr_street}, {del.addr_number}{del.addr_complement?`, ${del.addr_complement}`:''}<br/>{del.addr_neighborhood} · {del.addr_city}/{del.addr_state}{del.addr_zip&&<><br/><span style={{color:'#94A3B8',fontSize:12}}>CEP: {del.addr_zip}</span></>}</p>
-          <button onClick={openMaps} style={{marginTop:8,fontSize:12,fontWeight:700,color:'#2563EB',border:'none',background:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4}}><Ico ic="pin" size={13} color="#2563EB"/>Abrir no Google Maps</button>
-        </Box>
-
-        <Box>
-          <Ttl ic="hash" label="Pedido & Pagamento"/>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:12}}>
-            {del.store_order_num&&<IRow l="Nº Pedido da Loja" v={`#${del.store_order_num}`} hi/>}
-            <IRow l="Volumes" v={`${del.volumes||1} vol.`}/>
-            <IRow l="Pagamento" v={del.payment_method}/>
-            {del.change_for&&<IRow l="Troco para" v={`R$ ${del.change_for}`} hi/>}
-            <IRow l="Prioridade" v={del.priority} hi={del.priority==='Urgente'}/>
-            <IRow l="Vendedor" v={del.seller_name}/>
-          </div>
-          {del.notes&&<div style={{marginTop:12,padding:12,borderRadius:12,background:'#FEF9C3',border:'1.5px solid #FDE68A'}}><p style={{fontSize:11,fontWeight:700,color:'#92400E',marginBottom:4}}>Observações</p><p style={{fontSize:13,color:'#78350F'}}>{del.notes}</p></div>}
-        </Box>
-
-        <Box>
-          <Ttl ic="clock" label="Histórico de Status"/>
-          <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:12}}>
-            {[...(del.statusHistory||[])].reverse().map((h,i)=>{
-              const c=STATUS[h.status]||STATUS.criado;
-              return(<div key={i} style={{display:'flex',alignItems:'flex-start',gap:10}}><div style={{width:8,height:8,borderRadius:99,background:c.dot,flexShrink:0,marginTop:4}}/><div style={{flex:1}}><span style={{fontSize:13,fontWeight:700,color:c.color}}>{c.label}</span>{h.note&&<p style={{fontSize:11,color:'#94A3B8'}}>{h.note}</p>}<span style={{fontSize:11,color:'#94A3B8',marginLeft:6}}>· {h.changedBy}</span></div><span style={{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}>{fmtDT(h.changedAt)}</span></div>);
-            })}
-          </div>
-        </Box>
-      </div>
-
-      {assignOpen&&(
-        <Modal title="Designar Entregador" onClose={()=>setAssignOpen(false)}>
-          <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            {deliverers.map(u=>(
-              <button key={u.id} onClick={()=>setAssignSel(u.id)}
-                style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:14,border:`2px solid ${assignSel===u.id?'#2563EB':'var(--bd)'}`,background:assignSel===u.id?'#EFF6FF':'var(--inp)',cursor:'pointer',textAlign:'left'}}>
-                <div style={{width:36,height:36,borderRadius:99,background:'#EFF6FF',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="user" size={18} color="#2563EB"/></div>
-                <div style={{flex:1}}><p style={{fontWeight:700,fontSize:14,color:'var(--t)'}}>{u.name}</p><RoleBadge role={u.role}/></div>
-                {assignSel===u.id&&<Ico ic="ok" size={18} color="#2563EB"/>}
-              </button>
-            ))}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:4}}>
-              <Btn v="sec" full onClick={()=>setAssignOpen(false)}>Cancelar</Btn>
-              <Btn full loading={saving} disabled={!assignSel} onClick={doAssign}>Confirmar</Btn>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════
-//  MY ROUTE
-// ════════════════════════════════════════════════════════
-function MyRoute({s}){
-  const {currentUser,deliveries,branches}=s;
-  const myPending=deliveries.filter(x=>x.deliverer_id===currentUser.id&&!['entregue','cancelado'].includes(x.status));
-  const byBranch={};
-  myPending.forEach(x=>{
-    const k=x.branch_id||'_';
-    if(!byBranch[k])byBranch[k]={br:branches.find(b=>b.id===x.branch_id)||{id:k,name:x.branch_name||'Filial não informada',color:x.branch_color||'#9CA3AF',street:'',number:'',neighborhood:'',city:''},dels:[]};
-    byBranch[k].dels.push(x);
+    `;
   });
-  function openFull(){
-    const stops=[];
-    Object.values(byBranch).forEach(({br,dels})=>{
-      if(br.street)stops.push(`${br.street} ${br.number}, ${br.neighborhood}, ${br.city}`);
-      dels.forEach(d=>stops.push(`${d.addr_street} ${d.addr_number}, ${d.addr_neighborhood}, ${d.addr_city}`));
-    });
-    if(!stops.length)return;
-    const ori=encodeURIComponent(stops[0]);const dst=encodeURIComponent(stops[stops.length-1]);
-    const wp=stops.slice(1,-1).map(encodeURIComponent).join('|');
-    window.open(`https://www.google.com/maps/dir/?api=1&origin=${ori}&destination=${dst}${wp?`&waypoints=${wp}`:''}&travelmode=driving`,'_blank');
-  }
-  return(
-    <div style={{maxWidth:600,margin:'0 auto'}}>
-      <div style={{marginBottom:16}}><h1 style={{fontSize:18,fontWeight:800,color:'var(--t)'}}>Minha Rota</h1><p style={{fontSize:11,color:'var(--ts)'}}>{myPending.length} entrega{myPending.length!==1?'s':''} pendente{myPending.length!==1?'s':''}</p></div>
-      {!myPending.length
-        ?<Box s={{textAlign:'center',padding:48}}><Ico ic="navigate" size={40} color="#CBD5E1"/><p style={{color:'#9CA3AF',fontWeight:700,marginTop:14}}>Nenhuma entrega pendente 🎉</p></Box>
-        :(
-          <>
-            <button onClick={openFull} style={{width:'100%',background:'linear-gradient(135deg,#2563EB,#1D4ED8)',color:'#fff',border:'none',borderRadius:16,padding:'14px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',marginBottom:16,boxShadow:'0 4px 20px rgba(37,99,235,0.35)'}}>
-              <div style={{display:'flex',alignItems:'center',gap:12}}>
-                <div style={{width:40,height:40,borderRadius:12,background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="navigate" size={22} color="#fff"/></div>
-                <div style={{textAlign:'left'}}><p style={{fontSize:15,fontWeight:800}}>Abrir Rota Completa</p><p style={{fontSize:11,opacity:.8}}>{myPending.length} paradas · Google Maps</p></div>
-              </div>
-              <Ico ic="route" size={20} color="#fff"/>
-            </button>
-            {Object.values(byBranch).map(({br,dels})=>(
-              <div key={br.id} style={{marginBottom:16}}>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,padding:'10px 14px',borderRadius:14,background:br.color+'15',border:`1.5px solid ${br.color}40`}}>
-                  <div style={{width:10,height:10,borderRadius:99,background:br.color}}/>
-                  <div style={{flex:1}}><p style={{fontSize:13,fontWeight:800,color:br.color}}>{br.name}</p>{br.street&&<p style={{fontSize:11,color:'var(--ts)'}}>{br.street}, {br.number}</p>}</div>
-                  <span style={{fontSize:11,fontWeight:700,color:br.color,background:br.color+'20',padding:'3px 8px',borderRadius:99}}>{dels.length} entrega{dels.length!==1?'s':''}</span>
-                </div>
-                <div style={{display:'flex',flexDirection:'column',gap:8,paddingLeft:8,borderLeft:`3px solid ${br.color}40`,marginLeft:4}}>
-                  {dels.map((d,idx)=>(
-                    <Box key={d.id} s={{marginLeft:8}}>
-                      <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
-                        <div style={{width:26,height:26,borderRadius:8,background:br.color+'20',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><span style={{fontSize:11,fontWeight:800,color:br.color}}>{idx+1}</span></div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}><p style={{fontSize:13,fontWeight:700,color:'var(--t)'}}>{d.customer_name}</p>{d.priority==='Urgente'&&<span style={{fontSize:9,fontWeight:800,color:'#EA580C',background:'#FFF7ED',padding:'1px 6px',borderRadius:99}}>⚡</span>}</div>
-                          <p style={{fontSize:11,color:'var(--ts)',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.addr_street}, {d.addr_number} · {d.addr_neighborhood}</p>
-                          <div style={{display:'flex',gap:6}}><StatusBadge status={d.status}/>{d.volumes>1&&<span style={{fontSize:10,color:'var(--ts)'}}>{d.volumes} vol.</span>}<span style={{fontSize:10,color:'var(--ts)'}}>{d.payment_method}</span></div>
-                        </div>
-                        <div style={{display:'flex',flexDirection:'column',gap:5}}>
-                          <button onClick={()=>{const ori=br.street?encodeURIComponent(`${br.street} ${br.number}, ${br.neighborhood}, ${br.city}`):'';const dst=encodeURIComponent(`${d.addr_street} ${d.addr_number}, ${d.addr_neighborhood}, ${d.addr_city}`);window.open(ori?`https://www.google.com/maps/dir/?api=1&origin=${ori}&destination=${dst}&travelmode=driving`:`https://www.google.com/maps/search/?api=1&query=${dst}`,'_blank');}}
-                            style={{width:32,height:32,borderRadius:9,background:'#EFF6FF',border:'1.5px solid #BFDBFE',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="navigate" size={15} color="#2563EB"/></button>
-                          <a href={`tel:${d.customer_phone1}`}><button style={{width:32,height:32,borderRadius:9,background:'#F0FDF4',border:'1.5px solid #BBF7D0',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="phone" size={15} color="#16A34A"/></button></a>
-                        </div>
-                      </div>
-                      {d.notes&&<div style={{marginTop:8,padding:'7px 10px',borderRadius:8,background:'#FEF9C3',fontSize:11,color:'#78350F'}}>📝 {d.notes}</div>}
-                    </Box>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </>
-        )
-      }
-    </div>
-  );
 }
 
-// ════════════════════════════════════════════════════════
-//  BRANCHES, USERS, REPORTS — inline para brevidade
-// ════════════════════════════════════════════════════════
-function Branches({s,dispatch}){
-  const [modal,setModal]=useState(null);
-  const [toast,setToast]=useState(null);
-  const T=(msg,type='success')=>{setToast({msg,type});setTimeout(()=>setToast(null),3000);};
+window.onload = () => {
 
-  async function save(br){
-    try{
-      if(br.id){await API.putBranch(br.id,br);dispatch({type:'SET',p:{branches:s.branches.map(b=>b.id===br.id?br:b)}});T('Filial atualizada!');}
-      else{const r=await API.addBranch(br);dispatch({type:'SET',p:{branches:[...s.branches,{...br,id:r.id}]}});T('Filial cadastrada!');}
-      setModal(null);
-    }catch(e){T(e.message,'error');}
+  const logado = localStorage.getItem('logado');
+
+  if(logado === 'true'){
+
+    document.getElementById('loginCard').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+
+    carregarEntregas();
   }
-  async function del(br){
-    try{await API.delBranch(br.id);dispatch({type:'SET',p:{branches:s.branches.filter(b=>b.id!==br.id)}});T('Filial removida.');}
-    catch(e){T(e.message,'error');}
-  }
+};
 
-  return(
-    <div style={{maxWidth:600,margin:'0 auto'}}>
-      {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18}}>
-        <div><h1 style={{fontSize:18,fontWeight:800,color:'var(--t)'}}>Filiais</h1><p style={{fontSize:11,color:'var(--ts)'}}>{s.branches.length} filial(is)</p></div>
-        <Btn sm ic="plus" onClick={()=>setModal({})}>Nova Filial</Btn>
-      </div>
-      {s.branches.map(br=>{
-        const cnt=s.deliveries.filter(x=>x.branch_id===br.id).length;
-        return(
-          <Box key={br.id} s={{marginBottom:10,borderLeftWidth:4,borderLeftColor:br.color}}>
-            <div style={{display:'flex',alignItems:'center',gap:12}}>
-              <div style={{width:40,height:40,borderRadius:12,background:br.color+'20',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ico ic="building" size={20} color={br.color}/></div>
-              <div style={{flex:1,minWidth:0}}>
-                <p style={{fontWeight:800,fontSize:14,color:'var(--t)'}}>{br.name}</p>
-                <p style={{fontSize:11,color:'var(--ts)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{br.street}, {br.number} · {br.neighborhood} · {br.city}/{br.state}</p>
-                {br.phone&&<p style={{fontSize:11,color:'var(--ts)'}}>{br.phone}</p>}
-                <p style={{fontSize:10,fontWeight:700,color:br.color,marginTop:2}}>{cnt} pedido{cnt!==1?'s':''} vinculado{cnt!==1?'s':''}</p>
-              </div>
-              <div style={{display:'flex',gap:6}}>
-                <button onClick={()=>setModal(br)} style={{width:32,height:32,borderRadius:8,border:'1.5px solid var(--bd)',background:'var(--bg)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="edit" size={14} color="var(--ts)"/></button>
-                <button onClick={()=>del(br)} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #FECACA',background:'#FEF2F2',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="trash" size={14} color="#DC2626"/></button>
-              </div>
-            </div>
-          </Box>
-        );
-      })}
-      {modal!==null&&<BranchForm branch={modal} onSave={save} onClose={()=>setModal(null)}/>}
-    </div>
-  );
-}
-
-function BranchForm({branch,onSave,onClose}){
-  const isNew=!branch.id;
-  const [name,setName]=useState(branch.name||'');const [street,setStreet]=useState(branch.street||'');
-  const [number,setNumber]=useState(branch.number||'');const [comp,setComp]=useState(branch.complement||'');
-  const [neigh,setNeigh]=useState(branch.neighborhood||'');const [city,setCity]=useState(branch.city||'');
-  const [state,setState]=useState(branch.state||'PE');const [zip,setZip]=useState(branch.zip||'');
-  const [phone,setPhone]=useState(branch.phone||'');const [color,setColor]=useState(branch.color||BC[0]);
-  const [errs,setErrs]=useState({});const [saving,setSaving]=useState(false);const [cepLoad,setCL]=useState(false);
-
-  async function fetchCep(){const c=zip.replace(/\D/g,'');if(c.length!==8)return;setCL(true);try{const r=await fetch(`https://viacep.com.br/ws/${c}/json/`);const d=await r.json();if(!d.erro){setStreet(d.logradouro||street);setNeigh(d.bairro||neigh);setCity(d.localidade||city);setState(d.uf||state);}}catch{}setCL(false);}
-  async function submit(){
-    const e={};if(!name.trim())e.name='Obrigatório';if(!street.trim())e.street='Obrigatório';if(!number.trim())e.number='Obrigatório';if(!neigh.trim())e.neigh='Obrigatório';if(!city.trim())e.city='Obrigatório';
-    if(Object.keys(e).length){setErrs(e);return;}
-    setSaving(true);await onSave({...branch,name,street,number,complement:comp,neighborhood:neigh,city,state,zip,phone,color});setSaving(false);
-  }
-  return(
-    <Modal title={isNew?'Nova Filial':'Editar Filial'} onClose={onClose}>
-      <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        <div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Nome <span style={{color:'#EF4444'}}>*</span></label><input className={`fi${errs.name?' fi-err':''}`} value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: Filial Centro"/></div>
-        <div style={{display:'flex',gap:8,alignItems:'flex-end'}}><div style={{flex:1}}><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>CEP</label><input className="fi" value={zip} onChange={e=>setZip(e.target.value.replace(/\D/g,'').replace(/^(\d{5})(\d{1,3})/,'$1-$2').slice(0,9))} placeholder="55000-000"/></div><Btn v="sec" sm onClick={fetchCep} disabled={cepLoad}>{cepLoad?'...':'Buscar'}</Btn></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Rua <span style={{color:'#EF4444'}}>*</span></label><input className={`fi${errs.street?' fi-err':''}`} value={street} onChange={e=>setStreet(e.target.value)} placeholder="Ex: Rua das Flores"/></div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}><div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Número <span style={{color:'#EF4444'}}>*</span></label><input className={`fi${errs.number?' fi-err':''}`} value={number} onChange={e=>setNumber(e.target.value)} placeholder="100"/></div><div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Complemento</label><input className="fi" value={comp} onChange={e=>setComp(e.target.value)} placeholder="Sala 2"/></div></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Bairro <span style={{color:'#EF4444'}}>*</span></label><input className={`fi${errs.neigh?' fi-err':''}`} value={neigh} onChange={e=>setNeigh(e.target.value)} placeholder="Ex: Centro"/></div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}><div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Cidade <span style={{color:'#EF4444'}}>*</span></label><input className={`fi${errs.city?' fi-err':''}`} value={city} onChange={e=>setCity(e.target.value)} placeholder="Ex: Caruaru"/></div><div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Estado</label><select className="fi" value={state} onChange={e=>setState(e.target.value)}>{UFS.map(u=><option key={u} value={u}>{u}</option>)}</select></div></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Telefone</label><input className="fi" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="(81) 3333-0000"/></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:6}}>Cor da filial</label><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{BC.map(c=><button key={c} onClick={()=>setColor(c)} style={{width:32,height:32,borderRadius:99,background:c,border:`3px solid ${color===c?'#1E293B':'transparent'}`,cursor:'pointer'}}/>)}</div></div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:4}}><Btn v="sec" full onClick={onClose}>Cancelar</Btn><Btn full loading={saving} onClick={submit}>{isNew?'Cadastrar':'Salvar'}</Btn></div>
-      </div>
-    </Modal>
-  );
-}
-
-function Users({s,dispatch}){
-  const [modal,setModal]=useState(null);
-  const [toast,setToast]=useState(null);
-  const T=(msg,type='success')=>{setToast({msg,type});setTimeout(()=>setToast(null),3000);};
-
-  async function save(user){
-    try{
-      if(user.id){await API.putUser(user.id,user);dispatch({type:'SET',p:{users:s.users.map(u=>u.id===user.id?{...u,...user}:u)}});T('Usuário atualizado!');}
-      else{const r=await API.addUser(user);dispatch({type:'SET',p:{users:[...s.users,{...user,id:r.id,active:1}]}});T('Usuário criado!');}
-      setModal(null);
-    }catch(e){T(e.message,'error');}
-  }
-  async function del(u){
-    if(u.id===s.currentUser.id){T('Não pode excluir a si mesmo.','error');return;}
-    try{await API.delUser(u.id);dispatch({type:'SET',p:{users:s.users.filter(x=>x.id!==u.id)}});T('Removido.');}
-    catch(e){T(e.message,'error');}
-  }
-
-  return(
-    <div style={{maxWidth:600,margin:'0 auto'}}>
-      {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18}}>
-        <div><h1 style={{fontSize:18,fontWeight:800,color:'var(--t)'}}>Equipe</h1><p style={{fontSize:11,color:'var(--ts)'}}>{s.users.length} usuários</p></div>
-        <Btn sm ic="plus" onClick={()=>setModal({})}>Novo Usuário</Btn>
-      </div>
-      {['admin','vendedor','entregador','apoio'].map(role=>{
-        const group=s.users.filter(u=>u.role===role);if(!group.length)return null;
-        return(<div key={role} style={{marginBottom:16}}><div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}><RoleBadge role={role}/><span style={{fontSize:12,fontWeight:600,color:'var(--ts)'}}>{group.length}</span></div>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {group.map(u=>(
-              <Box key={u.id}>
-                <div style={{display:'flex',alignItems:'center',gap:12}}>
-                  <div style={{width:40,height:40,borderRadius:99,background:RC[u.role]?.bg||'#F3F4F6',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ico ic="user" size={20} color={RC[u.role]?.c||'#6B7280'}/></div>
-                  <div style={{flex:1}}><p style={{fontWeight:700,fontSize:14,color:'var(--t)'}}>{u.name}</p><p style={{fontSize:11,color:'#94A3B8'}}>{ROLES[u.role]||u.role}</p></div>
-                  <div style={{display:'flex',gap:6}}>
-                    <button onClick={()=>setModal(u)} style={{width:32,height:32,borderRadius:8,border:'1.5px solid var(--bd)',background:'var(--bg)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="edit" size={14} color="var(--ts)"/></button>
-                    {u.id!==s.currentUser.id&&<button onClick={()=>del(u)} style={{width:32,height:32,borderRadius:8,border:'1.5px solid #FECACA',background:'#FEF2F2',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="trash" size={14} color="#DC2626"/></button>}
-                  </div>
-                </div>
-              </Box>
-            ))}
-          </div>
-        </div>);
-      })}
-      {modal!==null&&<UserForm user={modal} onSave={save} onClose={()=>setModal(null)} isMe={modal?.id===s.currentUser?.id}/>}
-    </div>
-  );
-}
-
-function UserForm({user,onSave,onClose,isMe}){
-  const isNew=!user.id;
-  const [name,setName]=useState(user.name||'');const [pass,setPass]=useState('');const [role,setRole]=useState(user.role||'vendedor');
-  const [errs,setErrs]=useState({});const [saving,setSaving]=useState(false);
-  async function submit(){
-    const e={};if(!name.trim())e.name='Obrigatório';if(isNew&&!pass.trim())e.pass='Obrigatório';
-    if(Object.keys(e).length){setErrs(e);return;}
-    setSaving(true);await onSave({...user,name,password:pass||undefined,role});setSaving(false);
-  }
-  return(
-    <Modal title={isNew?'Novo Usuário':'Editar Usuário'} onClose={onClose}>
-      <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        <div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>Nome completo <span style={{color:'#EF4444'}}>*</span></label><input className={`fi${errs.name?' fi-err':''}`} value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: João Silva"/>{errs.name&&<p style={{fontSize:11,color:'#EF4444',marginTop:3}}>{errs.name}</p>}</div>
-        <div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:4}}>{isNew?'Senha':'Nova senha (em branco = manter)'}{isNew&&<span style={{color:'#EF4444'}}> *</span>}</label><input className={`fi${errs.pass?' fi-err':''}`} type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••"/>{errs.pass&&<p style={{fontSize:11,color:'#EF4444',marginTop:3}}>{errs.pass}</p>}</div>
-        {!isMe&&<div><label style={{fontSize:11,fontWeight:700,color:'var(--ts)',display:'block',marginBottom:6}}>Perfil <span style={{color:'#EF4444'}}>*</span></label><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>{Object.entries(ROLES).map(([k,l])=><button key={k} onClick={()=>setRole(k)} style={{padding:'9px 6px',borderRadius:12,fontSize:12,fontWeight:700,border:'2px solid',cursor:'pointer',borderColor:role===k?(RC[k]?.c||'#2563EB'):'var(--bd)',background:role===k?(RC[k]?.bg||'#EFF6FF'):'var(--inp)',color:role===k?(RC[k]?.c||'#2563EB'):'var(--t)'}}>{l}</button>)}</div></div>}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:4}}><Btn v="sec" full onClick={onClose}>Cancelar</Btn><Btn full loading={saving} onClick={submit}>{isNew?'Criar':'Salvar'}</Btn></div>
-      </div>
-    </Modal>
-  );
-}
-
-function Reports({s}){
-  const all=s.deliveries;
-  const rate=all.length?Math.round(all.filter(x=>x.status==='entregue').length/all.length*100):0;
-  const bySeller={},byNeigh={},byPay={};
-  all.forEach(x=>{bySeller[x.seller_name]=(bySeller[x.seller_name]||0)+1;byNeigh[x.addr_neighborhood]=(byNeigh[x.addr_neighborhood]||0)+1;byPay[x.payment_method]=(byPay[x.payment_method]||0)+1;});
-  return(
-    <div style={{maxWidth:600,margin:'0 auto'}}>
-      <div style={{marginBottom:18}}><h1 style={{fontSize:18,fontWeight:800,color:'var(--t)'}}>Relatórios</h1></div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
-        {[{l:'Total',v:all.length,c:'#3B82F6'},{l:'Taxa entrega',v:`${rate}%`,c:'#10B981'},{l:'Pendentes',v:all.filter(x=>!['entregue','cancelado'].includes(x.status)).length,c:'#F59E0B'},{l:'Atrasados',v:all.filter(isLate).length,c:'#EF4444'}].map(st=>(
-          <Box key={st.l}><p style={{fontSize:10,fontWeight:600,color:'var(--ts)',marginBottom:4}}>{st.l}</p><p style={{fontSize:26,fontWeight:800,color:st.c}}>{st.v}</p></Box>
-        ))}
-      </div>
-      <div style={{display:'flex',flexDirection:'column',gap:14}}>
-        {[['Por Vendedor',bySeller],['Por Bairro',byNeigh],['Por Pagamento',byPay]].map(([title,data])=>(
-          <Box key={title}><p style={{fontSize:13,fontWeight:700,color:'var(--t)',marginBottom:10}}>{title}</p>
-            {Object.entries(data).sort((a,b)=>b[1]-a[1]).map(([n,c])=>(
-              <div key={n} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid var(--bd)'}}><span style={{fontSize:13,color:'var(--t)'}}>{n||'—'}</span><span style={{fontSize:13,fontWeight:700,color:'#2563EB'}}>{c} pedido{c!==1?'s':''}</span></div>
-            ))}
-          </Box>
-        ))}
-        <Box><p style={{fontSize:13,fontWeight:700,color:'var(--t)',marginBottom:12}}>Status Geral</p>
-          {Object.entries(STATUS).map(([k,v])=>{const cnt=all.filter(x=>x.status===k).length;const pct=all.length?Math.round(cnt/all.length*100):0;return(
-            <div key={k} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
-              <span style={{fontSize:11,width:100,flexShrink:0,color:v.color,fontWeight:600}}>{v.label}</span>
-              <div style={{flex:1,height:7,borderRadius:99,background:'#F1F5F9',overflow:'hidden'}}><div style={{height:'100%',borderRadius:99,background:v.dot,width:`${pct}%`}}/></div>
-              <span style={{fontSize:12,fontWeight:700,color:'var(--ts)',width:16,textAlign:'right'}}>{cnt}</span>
-            </div>
-          );})}
-        </Box>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════
-//  APP ROOT
-// ════════════════════════════════════════════════════════
-function App(){
-  const [s,dispatch]=useReducer(reducer,INIT);
-  const [booting,setBooting]=useState(true);
-
-  useEffect(()=>{
-    async function boot(){
-      // Restore saved session
-      const savedUser=localStorage.getItem('da_usr');
-      const savedTok=localStorage.getItem('da_tok');
-      if(savedUser&&savedTok) dispatch({type:'RESTORE',user:JSON.parse(savedUser)});
-
-      // Load public data (users for login dropdown + branches)
-      try{
-        const [users,branches]=await Promise.all([API.users(),API.branches()]);
-        dispatch({type:'SET',p:{users,branches}});
-        // If already logged in, load deliveries too
-        if(savedTok){
-          const deliveries=await API.deliveries();
-          dispatch({type:'SET',p:{deliveries}});
-        }
-      }catch(e){console.warn('Boot:',e.message);}
-      setBooting(false);
-    }
-    boot();
-  },[]);
-
-  // Auto-refresh deliveries every 30s
-  useEffect(()=>{
-    if(!s.loggedIn)return;
-    const id=setInterval(async()=>{
-      try{const d=await API.deliveries();dispatch({type:'SET',p:{deliveries:d}});}catch{}
-    },30000);
-    return()=>clearInterval(id);
-  },[s.loggedIn]);
-
-  const theme=s.dark
-    ?{'--bg':'#0F172A','--c':'#1E293B','--bd':'#334155','--t':'#F1F5F9','--ts':'#94A3B8','--inp':'#1E293B'}
-    :{'--bg':'#F8FAFC','--c':'#FFFFFF','--bd':'#E2E8F0','--t':'#1E293B','--ts':'#64748B','--inp':'#FFFFFF'};
-
-  if(booting){
-    return(
-      <div style={{...theme,minHeight:'100vh',background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
-        <div style={{width:64,height:64,borderRadius:20,background:'#2563EB',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico ic="truck" size={32} color="#fff"/></div>
-        <div className="spin" style={{width:32,height:32,border:'3px solid #E2E8F0',borderTopColor:'#2563EB',borderRadius:99}}/>
-        <p style={{fontSize:13,color:'#64748B'}}>Conectando ao servidor...</p>
-      </div>
-    );
-  }
-
-  if(!s.loggedIn)return <div style={theme}><Login users={s.users} dispatch={dispatch}/></div>;
-
-  const {currentUser}=s;
-  const isAdmin=currentUser.role==='admin';
-  const isVendedor=currentUser.role==='vendedor';
-  const isEntregador=currentUser.role==='entregador'||currentUser.role==='apoio';
-
-  const nav=[
-    {id:'dashboard',l:'Início',ic:'home'},
-    ...(isAdmin||isVendedor?[{id:'new',l:'Novo Pedido',ic:'plus'}]:[]),
-    ...(isEntregador?[{id:'route',l:'Minha Rota',ic:'navigate'}]:[]),
-    ...(isAdmin?[{id:'branches',l:'Filiais',ic:'building'}]:[]),
-    ...(isAdmin?[{id:'users',l:'Equipe',ic:'users'}]:[]),
-    ...(isAdmin?[{id:'reports',l:'Relatórios',ic:'bar'}]:[]),
-  ];
-  const titles={dashboard:'Dashboard',new:'Novo Pedido',detail:'Detalhes',route:'Minha Rota',branches:'Filiais',users:'Equipe',reports:'Relatórios'};
-
-  return(
-    <div style={{...theme,background:'var(--bg)',color:'var(--t)',minHeight:'100vh',fontFamily:"'DM Sans',system-ui,sans-serif"}}>
-      <header style={{position:'sticky',top:0,zIndex:50,background:'var(--c)',borderBottom:'1.5px solid var(--bd)',padding:'11px 16px',display:'flex',alignItems:'center',gap:10}}>
-        <div style={{width:32,height:32,borderRadius:10,background:'#2563EB',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Ico ic="truck" size={17} color="#fff"/></div>
-        <span style={{fontWeight:800,fontSize:15,flex:1,color:'var(--t)'}}>DeliveryApp</span>
-        <span style={{fontSize:12,fontWeight:600,color:'var(--ts)'}}>{titles[s.view]||''}</span>
-        <button onClick={()=>dispatch({type:'DARK'})} style={{width:34,height:34,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',background:'var(--bg)',border:'1.5px solid var(--bd)',fontSize:15}}>{s.dark?'☀️':'🌙'}</button>
-        <button onClick={()=>dispatch({type:'LOGOUT'})} style={{width:34,height:34,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',background:'#FEF2F2',border:'1.5px solid #FECACA'}}><Ico ic="logout" size={15} color="#DC2626"/></button>
-      </header>
-
-      <main style={{padding:'16px 16px 100px',maxWidth:640,margin:'0 auto'}}>
-        {s.view==='dashboard'&&<Dashboard s={s} dispatch={dispatch}/>}
-        {s.view==='new'&&(isAdmin||isVendedor)&&<NewDelivery s={s} dispatch={dispatch}/>}
-        {s.view==='detail'&&s.sel&&<DeliveryDetail del={s.sel} s={s} dispatch={dispatch}/>}
-        {s.view==='route'&&isEntregador&&<MyRoute s={s}/>}
-        {s.view==='branches'&&isAdmin&&<Branches s={s} dispatch={dispatch}/>}
-        {s.view==='users'&&isAdmin&&<Users s={s} dispatch={dispatch}/>}
-        {s.view==='reports'&&isAdmin&&<Reports s={s}/>}
-      </main>
-
-      <nav style={{position:'fixed',bottom:0,left:0,right:0,background:'var(--c)',borderTop:'1.5px solid var(--bd)',display:'flex',zIndex:50}}>
-        {nav.map(item=>{
-          const active=s.view===item.id||(s.view==='detail'&&item.id==='dashboard');
-          return(
-            <button key={item.id} onClick={()=>dispatch({type:'NAV',v:item.id})}
-              style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'10px 0 8px',gap:3,cursor:'pointer',color:active?'#2563EB':'#94A3B8',background:'none',border:'none'}}>
-              <Ico ic={item.ic} size={20} color={active?'#2563EB':'#94A3B8'}/>
-              <span style={{fontSize:9,fontWeight:700}}>{item.l}</span>
-            </button>
-          );
-        })}
-      </nav>
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
+
 </body>
 </html>
